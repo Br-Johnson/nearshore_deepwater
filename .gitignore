@@ -1,1 +1,6 @@
 .httr-oauth
+data
+figs
+processed_data
+.Rproj.user
+.DS_Store
