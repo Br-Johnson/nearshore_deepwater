@@ -20,10 +20,20 @@ Focus on fine scale spatial distribution of outmigrating sockeye, pink and chum 
 * Detailed descriptions of net design and operation.  
 * Measurement process - make sure that these are aligned!
 
-Data needs:
-* DFO lat and longs
 
 Lit Review:
+
+_The Princeton Guide to Ecology_
+
+* Habitat selection
+* Ideal Free Distribution (Null model), but doesn't account for allee effect or conspecific attraction cues 
+* "Silver Spoon Effect" allows fish that arrive in better condition (freshwater carry over effects), to have sufficient energy reserves to: access riskier that offers reward of either better forage or reduced time spent in poor quality habitat. In fact, because poorer condition animals are more likely to settle for lower quality habitatm, they may reside in the Discovery Islands for longer than those which arrive in better condition and are on a mission to get to the next hotspot of feeding.
+
+_Litz, M. N. C., J. A. Miller, L. A. Copeman, D. J. Teel, L. A. Weitkamp, E. A. Daly, and A. M. Claiborne. 2017. Ontogenetic shifts in the diets of juvenile Chinook Salmon: new insight from stable isotopes and fatty acids. Environmental Biology of Fishes 100(4):337–360. Environmental Biology of Fishes._
+
+"A suite of environ- mental factors during early marine residence (e.g., physical conditions, plankton and predator abun- dance) have recently been shown to correlate with salmon survival (Burke et al. 2013; Miller et al. 2013, 2014),"
+
+"Because predation pres- sure and selective mortality may be higher in small- er or slower growing fish, rapid growth may provide a survival advantage during ontogeny (Zabel and Williams 2002; Claiborne et al. 2011;Duffy and Beauchamp 2011)."
 
 __Gerbrandt, N., Sc, B., & Routledge, R. (2013). Early Marine Distribution of Out-Migrating Juvenile Sockeye Salmon ( Oncorhynchus nerka ). M.Sc. Thesis, Simon Fraser University.__
 

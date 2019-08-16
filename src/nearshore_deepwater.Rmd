@@ -12,7 +12,7 @@ output:
 ---
 # Setup
 
-```{r echo FALSE}
+```{r setup, echo FALSE}
 # read in data files
 library(hakaisalmon)
 library(tidyverse)
@@ -22,8 +22,10 @@ library(hakaiApi)
 library(DescTools)
 library(car)
 
+options(scipen = 999)
+
 knitr::opts_chunk$set(echo = FALSE, message=FALSE, warning=FALSE, paged.print=TRUE)
-theme_set(ggsidekick::theme_sleek(base_size = 16)) #Thanks Sean Anderson
+theme_set(ggsidekick::theme_sleek(base_size = 18)) #Thanks Sean Anderson
 
 
 spp_labels <- c(CU = "Chum", PI = "Pink", SO = "Sockeye", DI = "Discovery Islands", 
@@ -66,39 +68,48 @@ hakai_coords <- okisollo %>%
 both_coords <- rbind(hakai_coords, dfo_coords) %>% 
   distinct()
 
+mean_hakai_coords <- c(mean(hakai_coords$lat), mean(hakai_coords$lon))
+mean_dfo_coords <- c(mean(dfo_coords$lat), mean(dfo_coords$lon))
 
 # Download shape file and plot map
 
+
 BC.shp <- readOGR(here("data","2_Shapefile", "COAST_TEST2.shp"))
-okisollo_extent <- extent(-125.540, -125.120,50.290, 50.320)
-okisollo_shp <- crop(BC.shp, okisollo_extent) 
-okisollo_df <- fortify(okisollo_shp)
+
 quadra <- extent(-126.15, -124.650, 49.96, 50.46)
 quadra_shp <- crop(BC.shp, quadra)
 quadra_df <- fortify(quadra_shp)
 
+(okisollo_map <- ggplot() + theme_bw() +
+  geom_polygon(data = quadra_df, aes(long, lat, group = group),
+               colour = "black", size = 0.1, fill = 'grey95') +
+  coord_map(xlim = c(-125.375, -125.275), ylim = c(50.28, 50.32))+
+  geom_point(data = both_coords, aes(x = lon, y = lat, colour = org), 
+              size = 4, alpha = 0.5) +
+  scalebar(x.min = -125.28, x.max = -125.325, 
+                y.min = 50.285, y.max = 50.29, 
+                dist = 1, dist_unit="km", transform = TRUE,
+                model = "WGS84", height = 0.2, 
+                st.dist = 0.3,
+                box.fill = c("grey30", "white"),
+                st.color = "grey30",
+                border.size = 0.5,
+                st.size = 3.5) +
+    theme(legend.title = element_blank())
+)
 
-ggplot() +
-   geom_point(data = both_coords, aes(x = lon, y = lat, colour = org), 
-              size = 3) +
-  geom_polygon(data= okisollo_df, aes(x=long,y=lat,group= group),
-               colour= "black", size=0.1, fill='grey95') +
-  coord_cartesian(xlim = c(-125.340, -125.320), ylim = c(50.303, 50.310)) +
-  #TODO: Fix this map so the scale bar works!
-  # ggsn::scalebar(okisollo_df, dist = .5, st.size=4, height=0.005, dd2km = TRUE, 
-  #               model = 'WGS84', anchor = c(x = -125.320, y = 50.3035))+
-  north(data = okisollo_df, scale = 0.1, symbol = 3, anchor= c(x = -125.340, 
-                                                         y = 50.310)) +
-  theme(panel.grid.minor = element_line(colour = NA),
-          panel.grid.major = element_line(colour = NA),
-          axis.title.y= element_blank(), axis.title.x = element_blank(),
-          axis.text.y= element_text(size=10), axis.text.x =
-            element_text(size=10)) +
-  scale_colour_hakai()
+okisollo_map <- okisollo_map + geom_text() + annotate("text", label = "Okisollo Channel", 
+                                      x = -125.3, y = 50.307, size = 4,
+                                      colour = "black") +
+  annotate("text", label = "Quadra Island", x = -125.325, y = 50.2818, size = 4,
+           colour = "black")+
+  annotate("text", label = "Sonora Island", x = -125.315, y = 50.315, size = 4,
+           colour = "black") +
+  annotate("text", label = "Venture Point", x = -125.348, y = 50.2954, size = 2.5,
+           colour = "black")
 
+north2(okisollo_map, x = 0.15, y = 0.73, symbol = 3) 
 ggsave(here("final_figs", "map_inset.png"))
-
-# TODO: Add bathymetry
 
 detach("package:raster", unload=TRUE)
 beepr::beep(2)
@@ -122,10 +133,12 @@ condition <- okisollo %>%
   mutate(se = 1.96 * (sd/sqrt(n))) %>% 
   mutate(CI = round(qt(1 - (0.05 / 2), n - 1) * se,2))
 
-condition %>% ggplot(aes(x = species, y = mean, colour = Habitat)) +
-    geom_point(stat = "identity", position = position_dodge(0.5)) +
-    geom_errorbar(position = position_dodge(.5), width = .25, aes(ymin = mean - CI, ymax = mean +
-                        CI)) +
+okisollo %>%
+  dplyr::filter(species %in% c("SO", "CU")) %>%
+  mutate(year = year(survey_date)) %>% 
+  dplyr::filter(!(year == 2016 & species %in% c("PI", "CO"))) %>% 
+  ggplot(aes(x = species, y = k, fill = Habitat)) +
+  geom_boxplot() +
   ylab("Condition factor") +
   xlab("Species")+
   facet_grid(~year, scales = "free") +
@@ -133,12 +146,24 @@ condition %>% ggplot(aes(x = species, y = mean, colour = Habitat)) +
           labels=c("Coho", "Chum", "Pink", "Sockeye")) +
   scale_fill_hakai() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        legend.direction = "horizontal", legend.position = "bottom") +
-  theme_grey()
+        legend.direction = "vertical", legend.position = c(.8,.85)) 
 
-ggsave("~/OneDrive/OneDrive Figures/Nearshore v. Deepwater/condition.png")
+ggsave(here("final_figs", "condition.png"),  width = 5, height = 5)
 
-ggsave(here("final_figs", "condition.png"))
+# sockeye in 2015 comparison of habitats
+(cond_stats <- okisollo %>% 
+  dplyr::filter(year == 2015,
+                species %in% c("SO")) %>% 
+    ungroup() %>% 
+  do(broom::tidy(t.test(.$k ~ .$Habitat))))
+
+# sockeye in 2015 comparison of habitats
+(cond_stats <- okisollo %>% 
+  dplyr::filter(year == 2016,
+                species %in% c("CU","SO")) %>% 
+    ungroup() %>% 
+    group_by(species) %>% 
+  do(broom::tidy(t.test(.$k ~ .$Habitat))))
 
 ```
 
@@ -160,10 +185,15 @@ lengths <- okisollo %>%
   mutate(se = 1.96 * (sd/sqrt(n))) %>% 
   mutate(CI = round(qt(1 - (0.05 / 2), n - 1) * se,2))
 
-lengths %>% ggplot(aes(x = species, y = mean, fill = Habitat)) +
-    geom_bar(stat = "identity", position = position_dodge()) +
-    geom_errorbar(position = position_dodge(.9), width = .25, aes(ymin = mean - CI, ymax = mean +
-                        CI)) +
+okisollo %>%
+  dplyr::filter(fork_length < 300, species %in% c("SO", "PI", "CU", "CO")) %>%
+  mutate(year = year(survey_date)) %>% 
+  dplyr::filter(!(year == 2016 & species %in% c("PI", "CO"))) %>% 
+  
+  ggplot(aes(x = species, y = fork_length, fill = Habitat)) +
+  geom_boxplot() +
+    # geom_errorbar(position = position_dodge(.9), width = .25, aes(ymin = mean - CI, ymax = mean +
+    #                     CI)) +
   ylab("Fork length (mm)") +
   xlab("Species")+
   facet_grid(~year, scales = "free") +
@@ -171,10 +201,14 @@ lengths %>% ggplot(aes(x = species, y = mean, fill = Habitat)) +
           labels=c("Coho", "Chum", "Pink", "Sockeye")) +
   scale_fill_hakai() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        legend.direction = "horizontal", legend.position = "bottom")
+         legend.direction = "vertical", legend.position = c(.8,.85))
+
+#TODO: Put the legend in the top left of the plot
+#TODO: Add sample sizes to plot
 
 ggsave(here("final_figs", "lengths_annual.png"))
 
+# knitr::kable(lengths, style = "markdown")
 ```
 
 
@@ -275,32 +309,29 @@ Late Shuswap Portage consistently higher proportion in nearshore
 
 ## Stock specific length comparisons
 
-So why aren't we seeing Stock Mid-channel?
+So why aren't we seeing LSP Stock as much in deep water habitat?
 
 ```{r LSP lengths}
 
-okisollo %>% 
+lsp_lengths <- okisollo %>% 
   mutate(Stock = ifelse(collapsed_fraser_stocks == "Late_Shuswap_Portage", "Late_Shuswap_Portage", 
                       "All Other Stocks"))  %>% 
   dplyr::filter(Habitat == "Deepwater") %>% 
-  drop_na(Stock) %>% 
-  group_by(year, Stock) %>% 
-  summarize(mean_fl = mean(fork_length, na.rm = T),
-            n = n()) %>% 
-  mutate(sd = sd(mean_fl),
-            se = sd / sqrt(n),
-            CI = round(qt(1 - (0.05 / 2), n - 1) * se,2)) %>% 
-  ggplot(aes(x = factor(year), y = mean_fl, fill = Stock)) +
-  geom_bar(stat = "identity", position = position_dodge(0.9)) +
-  geom_errorbar(stat = "identity", position = position_dodge(.9), width = .25, aes(ymin = mean_fl - CI,
-                                                                ymax = mean_fl + CI)) +
-  coord_cartesian(ylim = c(80,125)) +
+  drop_na(Stock)
+
+  ggplot(lsp_lengths, aes(x = factor(year), y = fork_length, fill = Stock)) +
+  geom_boxplot() +
   scale_fill_hakai() +
   xlab("Year") +
   ylab("Mean fork length (mm)")+
-  ggtitle("Deepwater Habitat Fork Lengths")
+  ggtitle("Deepwater Habitat Fork Lengths") +
+  theme(legend.direction = "vertical", legend.position = c(.6,.9))
 
-ggsave(here("final_figs", "Lengths_lsp_deepwater.png"))
+ggsave(here("final_figs", "Lengths_lsp_deepwater.png"), width = 5, height = 5)
+
+(lsp_len_stats_2015 <- lsp_lengths %>% 
+    group_by(year) %>% 
+  do(broom::tidy(t.test(.$fork_length ~ .$Stock))))
          
 ```
 
@@ -396,7 +427,7 @@ ggplot() +
   facet_wrap(species ~ ., nrow = 2, labeller = labeller(species = spp_labels)) +
   #geom_vline(data = medians_2, aes(xintercept = median, colour = org),
              # size=.75) +
-  ylab("Cumulative Abundance (%)") +
+  ylab("Cumulative catch (%)") +
   xlab("Julian Day") +
   scale_colour_hakai() +
   ggtitle("2015 Migration Timing")
@@ -424,7 +455,6 @@ ggsave(here("final_figs", "catch_prop.png"))
 
 
 # Diversity
-
 
 ```{r stock diversity}
 
@@ -479,6 +509,11 @@ ggiNEXT(output_rich, type = 1) +
 
 ggsave(here("final_figs", "stock_accumulations.png"))
 
+# all three hill numbers compared for asymptotic diversity
+output_all %>% 
+  # extend the deepwater extrapolation to the same length as nearshore
+  # change the names of the facet variables to Richness ,shann...
+  ggiNEXT(output_all, type=1, facet.var="order")
 
 
 rarefaction_tbl <- estimateD(rarefy, datatype = "abundance", base = "size",
